@@ -8,10 +8,12 @@ public class Main {
         DoctorService doctorService = new DoctorService();
         PatientService patientService = new PatientService();
         AppointmentService appointmentService = new AppointmentService();
-        doctorService.loadAll(FileManager.loadDoctors());
-        patientService.loadAll(FileManager.loadPatients());
-        appointmentService.loadAll(FileManager.loadAppointments(doctorService, patientService));
-        System.out.println("Previous data loaded successfully!");
+        List<Doctor> loadedDoctors = DatabaseManager.loadDoctors();
+        List<Patient> loadedPatients = DatabaseManager.loadPatients();
+        doctorService.loadAll(loadedDoctors);
+        patientService.loadAll(loadedPatients);
+        appointmentService.loadAll(DatabaseManager.loadAppointments(loadedDoctors, loadedPatients));
+        System.out.println("Previous data loaded successfully from database!");
 
         while (true) {
             System.out.println("\n===== HOSPITAL MANAGEMENT SYSTEM =====");
@@ -43,6 +45,7 @@ public class Main {
                     System.out.print("Enter Specialization: ");
                     String spec = sc.nextLine();
                     doctorService.addDoctor(new Doctor(did, dname, dage, dgender, spec));
+                    DatabaseManager.saveDoctor(doctorService.findDoctorById(did));
                     break;
 
                 case 2:
@@ -57,6 +60,11 @@ public class Main {
                     System.out.print("Enter Disease: ");
                     String disease = sc.nextLine();
                     patientService.addPatient(new Patient(pid, pname, page, pgender, disease));
+                    try {
+                        DatabaseManager.savePatient(patientService.findPatientByID(pid));
+                    } catch (PatientNotFoundException e) {
+                        System.out.println("Error saving patient: " + e.getMessage());
+                    }
                     break;
 
                 case 3:
@@ -74,6 +82,8 @@ public class Main {
                             System.out.println("Doctor not found!");
                         } else {
                             appointmentService.bookAppointment(patient, doctor, slot);
+                            Appointment newAppointment = appointmentService.getAllAppointments().get(appointmentService.getAllAppointments().size() - 1);
+                            DatabaseManager.saveAppointment(newAppointment);
                         }
                     } catch (PatientNotFoundException | DoctorNotAvailableException e) {
                         System.out.println("Error: " + e.getMessage());
@@ -159,10 +169,6 @@ public class Main {
                     break;
 
                 case 11:
-                    FileManager.saveDoctors(doctorService.getAllDoctors());
-                    FileManager.savePatients(patientService.getAllPatients());
-                    FileManager.saveAppointments(appointmentService.getAllAppointments());
-                    System.out.println("Data saved successfully!");
                     System.out.println("Exiting... Thank you!");
                     sc.close();
                     return;
